@@ -1,0 +1,301 @@
+------------------------
+--
+-- main.lua
+--
+-----------------------------------------------------------------------------------------
+
+-- Your code here
+-----------------------------------------------------------------------------------------
+--
+-- main.lua
+--
+-----------------------------------------------------------------------------------------
+
+-- 1 tabelle per la gestione delle bombe
+local bombe = {} 
+local letters = {}
+
+-- 2 Costruzione dei gruppi per oggetti in background e in foreground
+
+local bg = display.newGroup()
+local fg = display.newGroup()
+
+--DOMANDE 1 LIVELLO
+
+local domanda1f= "lo metti quando ti tagli"
+local domanda2f = "lo spalmi sullo spazolino"
+local domanda3f = "lavorano all'ospedale"
+local domanda4f= "debella il virus"
+local domanda5f = "lo usi mentre ti lavi"
+
+--DOMANDE 2 LIVELLO
+
+local domanda1m = "una pandemia del XIV secolo"
+local domanda2m = "lo bevi per debellare la tosse"
+local domanda3m = "lo metti se hai il braccio rotto"
+local domanda4m = "la malattia che colpisce i denti"
+local domanda5m = "lo strumento per ignettare"
+
+T = {{domanda1f, domanda2f, domanda3f, domanda4f, domanda5f},
+    {domanda1m, domanda2m, domanda3m, domanda4m, domanda5m}} 
+
+	local risultato = T [math.random(1,2)][math.random(1,5)]
+	--print (#risultato)
+				
+
+
+local bannerX = (string.len(risultato)) * 33
+print(bannerX)
+  
+local banner = display.newImageRect(fg,"IMG/bannerDomanda.png", bannerX+20, 100)
+
+  banner.x = display.contentCenterX
+  banner.y = display.contentCenterY-750
+  
+local domanda = display.newText({fg, text = risultato, font = "Minecraft", fontSize = "50"})
+
+  domanda.x = banner.x
+  domanda.y = banner.y
+  
+
+-- 3 Posizionamento Immagine di Background 
+local background = display.newImageRect(bg,"IMG/sfondoProva.png",1080, 1920)
+background.x = display.contentCenterX
+background.y = display.contentCenterY
+
+
+
+
+--Velocità di scrolling del terreno pari a 4 pixel per frame 
+--(animazione frame-based)
+--local speed = 4
+
+-- 4 Caricamento dell'image sheet relativo al cannone
+local opt = { width = 450, height = 450, numFrames = 3}
+local cannoneSheet = graphics.newImageSheet("IMG/cannone.png", opt)
+
+-- 4.1 Definizione della sequenza di animazione del cannone
+local seqs ={{
+	          name = "scroll",
+			  start = 1,
+              count = 3,
+              time = 300,
+			  loopCount = 0,
+			  loopDirection ="bounce"
+	    	 }
+			} 
+
+-- 5 Image sheet e sequenza di animazione per le bombe.
+local opt_m = { width = 208, height = 209, numFrames = 3}
+local bombaSheet = graphics.newImageSheet("IMG/bomba.png", opt_m)
+local seqs_m ={{
+	          name = "shoot",
+			  start = 1,
+              count = 3,
+              time = 300,
+			  loopCount = 0,
+			  loopDirection ="forward"
+	    	 }
+			} 
+			
+-- 6 Creazione dello sprite relativo al cannone
+--Lo sprite deve essere collocato nel punto di coordinate
+--x = centro del display, y=-100 (pertanto lo sprite è inizialmente 
+--non visibile in quanto è collocato  sopra il margine 
+--superiore del display)	
+local cannone=display.newSprite(cannoneSheet,seqs)
+cannone.x = display.contentCenterX
+cannone.y = display.contentCenterY+580 	
+cannone.offset=0
+
+-- 7 Caricamento dell'immagine sheet relativo al tap
+
+local seqs_s ={{
+	          name = "startt",
+			  start = 1,
+              count = 4,
+              time = 10,
+			  loopCount = 0,
+			  loopDirection ="bounce"
+	    	 }
+			} 
+
+local optStart = { width = 500, height = 200, numFrames = 4}
+local startSheet = graphics.newImageSheet("IMG/start.png", optStart)
+
+-- 7 Caricare immagine start, in alto al display
+
+local tapStart = display.newSprite (fg, startSheet, seqs_s)
+tapStart.x = display.contentCenterX
+tapStart.y = display.contentHeight/5
+
+-- Caricare i SUONI click.wav, planeEngine.ogg, shoot.wav e la musica di 
+-- backgorund Happy.mp3
+--local colonna_sonora = audio.loadSound("sfx/musica.mp3")
+--local shoot = audio.loadSound("sfx/cannonShoot.mp3")
+--local parola = audio.loadSound("sfx/parola.mp3")
+--local lettera = audio.loadStream("sfx/lettera.mp3")
+--local game_over = audio.loadStream("sfx/GameOver.mp3")
+--local error_letter = audio.loadStream("sfx/errorLetter.mp3")
+
+-- INIZIO INTRO DEL GIOCO
+
+-- Generare la transizione tapEnter che attende 600ms prima di
+-- di far transire l'immagine tap alla coordinata 
+-- y= "display.contentCenterY - 100" . Si usi la funzione di easing
+-- easing.outBounce
+local tapEnter = transition.to(tapStart,{time=600,y=display.contentHeight/4,
+                                            delay=500,transition=easing.outBounce})
+
+
+-- Una volta che le immagini tap è visibile
+-- al centro del display, farle lampeggiare usando la funzione
+-- transition.blink con tempo di blinking pari a 1 secondo
+--local blinkTap=transition.blink(tapStart,{time=1300})											
+
+-- FINE INTRO DEL GIOCO
+
+-- INIZIO FASE DI GIOCO
+
+-- funzione startGame, eseguita dopo la visualizzazione
+-- della intro del gioco
+local function startGame()
+	
+	-- una volta terminata la intro rimuovere il table listener
+	-- dell'oggetto grafico cannone associato all'evento tap
+	background:removeEventListener("tap",cannone)
+
+	
+	-- funzione moveCannone per il controllo del cannone mediante 
+	-- trascinamento (evento touch)
+	local function moveCannone(event)
+		local cannone = event.target
+		if event.phase=="began" then
+			cannone.offset= event.x-cannone.x
+			display.currentStage:setFocus(cannone)
+		elseif event.phase=="moved" then
+			cannone.x=event.x-cannone.offset
+		elseif event.phase=="ended" or event.phase=="cancelled" then
+					display.currentStage:setFocus(nil)
+		end	
+		return true		
+	end	
+	
+	-- funzione ascoltatore associata all'evento tap. Quando
+	-- premo il pulsante rosso una nuovo bomba viene creata
+	-- e nascosta dietro il cannone.	
+	local function shoot(event)
+		local bomba = display.newSprite(fg,bombaSheet,seqs_m)
+		bomba:toBack()
+		bomba.x = cannone.x
+		bomba.y = cannone.y
+		bomba:play()
+		physics.addBody (bomba, "dynamic", {bounce = 0, friction = 1})
+		table.insert(bombe,bomba)
+		local shoot = transition.to(bomba,{time = 400,y= -110})
+		return bombe
+	end
+    
+	-- premendo il cannone  si esegue il function listener shoot
+	cannone:addEventListener("tap",shoot)
+	
+	-- aggiungere il function listener moveCannone associato
+	-- all'oggetto cannone e relativo all'evento touch
+	cannone:addEventListener("touch",moveCannone)
+	
+	-- funzione chiamata ogni secondo per eliminare bombe non attive
+	
+	local function gameLoop()
+		
+		for i,thisBomba in ipairs(bombe) do
+			if thisBomba.y >= 0 then
+				display.remove(thisBomba)
+				table.remove(bombe,i)
+			end
+	   end		
+	end
+	
+	-- richiama gameLoop ogni secondo
+	timer.performWithDelay(1000,gameLoop,0)
+	
+	local physics = require ("physics")
+	physics.start()
+	physics.setGravity(0,0)
+	
+	local wallSX = display.newLine (-10, 0, -10, 10000)
+	physics.addBody (wallSX, "static")
+	wallSX:toBack()
+	
+	local wallDX = display.newLine (1090, 0, 1090, 10000)
+	physics.addBody (wallDX, "static")
+	wallDX:toBack()
+	
+	local wallTop = display.newLine (0, display.contentCenterY-750, 10000, 0)
+	physics.addBody (wallTop, "static")
+	wallTop:toBack()
+	
+	local wallBotton = display.newLine (0, display.contentCenterY+580, 10000, 1920)
+	physics.addBody (wallBotton, "static")
+	wallBotton:toBack()
+	
+	
+	local alfabeto = {"c","i","a","o"}
+	
+	print("alfabeto = ",#alfabeto )
+
+
+    local i = 1 --indice i
+	while (i < #alfabeto+1) --creo un while
+	do
+    print("value = ", i)
+	
+    local lettere = alfabeto[i]
+	
+	print("letters = ", alfabeto[i])
+	-- local variable that stores the alien to be generated
+
+
+		local letter = display.newText({bg, text = lettere, font = "SuperMario256", fontSize = "80"})
+
+		letter:setFillColor( 1, 0, 0 )
+		letter.x = math.random(display.contentWidth)
+		letter.y = math.random(200, display.contentHeight-800)
+	
+		physics.addBody (letter, "dynamic", {bounce = 1, friction = 0})
+		letter: setLinearVelocity (math.random(10, 500), math.random(10, 500))
+		letter.isFixedRotation = true --fa rimanere la lettera dritta
+		  
+	
+      i = i+1
+    end --end while
+	
+
+display.remove(letter)
+	
+
+
+
+end --startGame
+
+
+
+-- Funzione che implementa la terminazione
+-- della intro e chiama la funzione
+-- di inizio gioco startGame												
+local function CannoneEndIntro(self,event)
+	--Rimozione di tutte le transizioni caricate
+	transition.cancel()
+	--Rimozione degli oggetti grafici tap
+	tapStart:removeSelf()
+	
+	startGame()
+end
+
+-- Associare il table listener CannoneEndIntro per l'evento
+-- tap all'oggetto cannone.
+cannone.tap=CannoneEndIntro
+tapStart:addEventListener("tap",cannone)	
+
+--background:addEventListener("tap",createLetter)
+	
+
